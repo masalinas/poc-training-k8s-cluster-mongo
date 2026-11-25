@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Guía Práctica de MongoDB en Kubernetes con StatefulSets</title>
+  <style>
+
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+    @page {
+      size: A4 portrait;
+      margin: 18mm 14mm 18mm 14mm;
+      @bottom-right {
+        content: "Página " counter(page);
+        font-family: 'Inter', sans-serif;
+        font-size: 8pt;
+        color: #64748b;
+      }
+      @bottom-left {
+        content: "Curso Kubernetes - Cap. 3: MongoDB con StatefulSets y Consenso Distribuido";
+        font-family: 'Inter', sans-serif;
+        font-size: 8pt;
+        color: #64748b;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 10pt;
+      line-height: 1.55;
+      color: #1e293b;
+      background-color: #ffffff;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Portada Editorial */
+    .cover {
+      page-break-after: always;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 90vh;
+      padding: 40px 20px;
+    }
+
+    .badge-k8s {
+      display: inline-block;
+      align-self: flex-start;
+      background-color: #dbeafe;
+      color: #1e40af;
+      font-weight: 700;
+      font-size: 9pt;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 24px;
+    }
+
+    .cover h1 {
+      font-size: 26pt;
+      font-weight: 800;
+      line-height: 1.2;
+      color: #0f172a;
+      margin: 0 0 16px 0;
+      letter-spacing: -0.02em;
+    }
+
+    .cover h2 {
+      font-size: 14pt;
+      font-weight: 500;
+      line-height: 1.45;
+      color: #475569;
+      margin: 0 0 40px 0;
+    }
+
+    .cover-meta {
+      border-top: 2px solid #e2e8f0;
+      padding-top: 24px;
+      margin-top: 20px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      font-size: 9pt;
+      color: #64748b;
+    }
+
+    .cover-meta strong {
+      color: #0f172a;
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .cover-footer {
+      margin-top: 40px;
+      padding: 14px 18px;
+      background-color: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 8.5pt;
+      color: #475569;
+      line-height: 1.5;
+    }
+
+    /* Encabezados y Secciones */
+    .section-banner {
+      background: linear-gradient(135deg, #1e3a8a 0%, #0369a1 100%);
+      color: #ffffff;
+      padding: 14px 18px;
+      border-radius: 8px;
+      margin-top: 36px;
+      margin-bottom: 20px;
+      page-break-after: avoid;
+      page-break-inside: avoid;
+    }
+
+    .section-banner h2 {
+      color: #ffffff;
+      font-weight: 700;
+      border-bottom: none;
+      padding: 0;
+      margin: 0;
+      font-size: 15pt;
+    }
+
+    .section-banner p {
+      color: #bae6fd;
+      margin: 4px 0 0 0;
+      font-size: 8.5pt;
+    }
+
+    h3 {
+      font-size: 12pt;
+      font-weight: 600;
+      color: #1e3a8a;
+      margin-top: 22px;
+      margin-bottom: 8px;
+      page-break-after: avoid;
+    }
+
+    h4 {
+      font-size: 10.5pt;
+      font-weight: 600;
+      color: #334155;
+      margin-top: 14px;
+      margin-bottom: 6px;
+      page-break-after: avoid;
+    }
+
+    p {
+      margin-top: 0;
+      margin-bottom: 10px;
+    }
+
+    ul, ol {
+      margin-top: 0;
+      margin-bottom: 12px;
+      padding-left: 22px;
+    }
+
+    li {
+      margin-bottom: 4px;
+    }
+
+    /* Bloques de Código */
+    pre {
+      background-color: #0f172a;
+      color: #f8fafc;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8pt;
+      line-height: 1.45;
+      padding: 12px 14px;
+      border-radius: 6px;
+      border-left: 4px solid #38bdf8;
+      margin: 10px 0 14px 0;
+      page-break-inside: avoid;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      white-space: pre-wrap !important;
+      word-wrap: break-word !important;
+      word-break: break-all !important;
+      overflow-wrap: anywhere !important;
+      overflow: visible !important;
+    }
+
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8.5pt;
+      background-color: #f1f5f9;
+      color: #0f172a;
+      padding: 2px 5px;
+      border-radius: 4px;
+      border: 1px solid #e2e8f0;
+      word-break: break-all;
+      overflow-wrap: anywhere;
+    }
+
+    pre code {
+      background-color: transparent;
+      color: inherit;
+      padding: 0;
+      border: none;
+      font-size: inherit;
+      white-space: pre-wrap !important;
+      word-break: break-all !important;
+      overflow-wrap: anywhere !important;
+    }
+
+    /* Alertas y Callouts */
+    .alert {
+      padding: 12px 14px;
+      border-radius: 6px;
+      margin: 14px 0;
+      font-size: 9pt;
+      page-break-inside: avoid;
+      border-left: 4px solid;
+    }
+
+    .alert-warning {
+      background-color: #fffbeb;
+      border-color: #f59e0b;
+      color: #92400e;
+    }
+
+    .alert-important {
+      background-color: #fef2f2;
+      border-color: #ef4444;
+      color: #991b1b;
+    }
+
+    .alert-note {
+      background-color: #f0f9ff;
+      border-color: #0284c7;
+      color: #075985;
+    }
+
+    .alert-tip {
+      background-color: #f0fdf4;
+      border-color: #22c55e;
+      color: #166534;
+    }
+
+    .alert-caution {
+      background-color: #fef2f2;
+      border-color: #dc2626;
+      color: #7f1d1d;
+    }
+
+    .alert-title {
+      font-weight: 700;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      font-size: 8pt;
+      letter-spacing: 0.05em;
+    }
+
+    /* Tablas */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      font-size: 8.8pt;
+      page-break-inside: avoid;
+    }
+
+    th, td {
+      border: 1px solid #cbd5e1;
+      padding: 8px 10px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #f8fafc;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    tr:nth-child(even) td {
+      background-color: #f1f5f9;
+    }
+
+    /* Tabla de Contenidos */
+    .toc {
+      background-color: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 30px;
+      page-break-after: always;
+    }
+
+    .toc h2 {
+      margin-top: 0;
+      border-bottom: 2px solid #cbd5e1;
+      padding-bottom: 8px;
+      font-size: 14pt;
+      color: #0f172a;
+    }
+
+    .toc ul {
+      list-style-type: none;
+      padding-left: 0;
+      margin-bottom: 0;
+    }
+
+    .toc > ul > li {
+      font-weight: 600;
+      margin-top: 10px;
+    }
+
+    .toc ul ul {
+      padding-left: 20px;
+      margin-top: 4px;
+    }
+
+    .toc ul ul li {
+      font-weight: 400;
+      font-size: 9pt;
+      margin-bottom: 3px;
+    }
+
+    .toc a {
+      color: #1e3a8a;
+      text-decoration: none;
+    }
+
+    .toc a:hover {
+      text-decoration: underline;
+    }
+
+  </style>
+</head>
+<body>
+
+    <div class="cover">
+      <div class="badge-k8s">Capítulo 3 · Bases de Datos NoSQL y Consenso Distribuido</div>
+      <h1>Guía Práctica de MongoDB en Kubernetes con StatefulSets</h1>
+      <h2>Despliegue Manual de Alta Disponibilidad con Replica Set, Anatomía de Red y el Dilema de Orquestación sin Operadores</h2>
+      
+      <div class="cover-meta">
+        <div>
+          <strong>Autor:</strong>
+          Equipo Docente de Kubernetes y Arquitectura de Datos
+        </div>
+        <div>
+          <strong>Documento Oficial del Curso:</strong>
+          Capítulo 3 - Gestión de Cargas con Estado NoSQL
+        </div>
+        <div>
+          <strong>Entregable del Laboratorio:</strong>
+          <code>k8s-mongodb-statefulset.pdf</code>
+        </div>
+        <div>
+          <strong>Pila Tecnológica Evaluada:</strong>
+          Kubernetes v1.31, MongoDB 7.0, local-path-provisioner, CoreDNS
+        </div>
+      </div>
+
+      <div class="cover-footer">
+        <strong>Objetivo del Laboratorio:</strong> Comprender a nivel de paquete y almacenamiento el funcionamiento de un Replica Set distribuido de MongoDB en Kubernetes estándar. Demostrar empíricamente las capacidades de auto-elección de líder por quórum y los límites estructurales de las primitivas nativas ante particiones de red y operaciones de escalado, fundamentando la necesidad técnica de los Operadores en entornos productivos.
+      </div>
+    </div>
+    
+
+    <div class="toc" id="toc">
+      <h2>Tabla de Contenidos</h2>
+      <ul>
+        <li><a href="#sec1">1. Fundamentos y Arquitectura de Estado en Kubernetes</a>
+          <ul>
+            <li><a href="#sec1-1">1.1 El Contrato de Estado: Deployment vs StatefulSet</a></li>
+            <li><a href="#sec1-2">1.2 Diagrama de Topología y Flujo de Replicación del Replica Set</a></li>
+            <li><a href="#sec1-3">1.3 Matriz de Componentes del Clúster</a></li>
+          </ul>
+        </li>
+        <li><a href="#sec2">2. Preparación del Almacenamiento Dinámico (StorageClass)</a>
+          <ul>
+            <li><a href="#sec2-1">2.1 El Problema del Almacenamiento en Clústeres Kubeadm / Bare-Metal</a></li>
+            <li><a href="#sec2-2">2.2 Despliegue de Rancher local-path-provisioner</a></li>
+            <li><a href="#sec2-3">2.3 Verificación de la StorageClass por Defecto</a></li>
+            <li><a href="#sec2-4">2.4 Ajuste de Tolerancias del Nodo Master (Control Plane)</a></li>
+          </ul>
+        </li>
+        <li><a href="#sec3">3. Configuración Base y Gestión de Credenciales</a>
+          <ul>
+            <li><a href="#sec3-1">3.1 Secret de Autenticación para Superusuario y Clúster KeyFile</a></li>
+            <li><a href="#sec3-2">3.2 ConfigMap con mongod.conf (WiredTiger, Replicación y Seguridad)</a></li>
+          </ul>
+        </li>
+        <li><a href="#sec4">4. La Capa de Red: Headless Service y el Paradigma de Conexión de MongoDB</a>
+          <ul>
+            <li><a href="#sec4-1">4.1 Por qué un Servicio Estándar no Sirve: Headless Service (clusterIP: None)</a></li>
+            <li><a href="#sec4-2">4.2 Resolución DNS Individual por Pod en CoreDNS</a></li>
+            <li><a href="#sec4-3">4.3 El Antipatrón del Servicio Primario Estático y el Rol de los Drivers</a></li>
+          </ul>
+        </li>
+        <li><a href="#sec5">5. Despliegue del StatefulSet y Mecánica del InitContainer</a>
+          <ul>
+            <li><a href="#sec5-1">5.1 Anatomía del StatefulSet: replicas, serviceName y OrderedReady</a></li>
+            <li><a href="#sec5-2">5.2 Aislamiento de Volúmenes con volumeClaimTemplates</a></li>
+            <li><a href="#sec5-3">5.3 Desmontando la Fricción de Seguridad: El InitContainer para el keyFile</a></li>
+            <li><a href="#sec5-4">5.4 Despliegue Secuencial y Seguimiento del Arranque</a></li>
+          </ul>
+        </li>
+        <li><a href="#sec6">6. Inicialización Guiada y Verificación del Replica Set</a>
+          <ul>
+            <li><a href="#sec6-1">6.1 Acceso Interactivo con mongosh al Pod Inicial (mongodb-0)</a></li>
+            <li><a href="#sec6-2">6.2 Inicialización del Replica Set (rs.initiate()) paso a paso con FQDNs</a></li>
+            <li><a href="#sec6-3">6.3 Creación de Base de Datos, Colección y Documentos de Prueba</a></li>
+            <li><a href="#sec6-4">6.4 Validación de Replicación Oplog en Secundarios y Protección contra Escrituras</a></li>
+          </ul>
+        </li>
+        <li><a href="#sec7">7. El Experimento del Caos: Resiliencia y Límites de Kubernetes Puro</a>
+          <ul>
+            <li><a href="#sec7-1">7.1 Fase 1: Caída del Nodo Primario y Elección Automática por Quórum</a></li>
+            <li><a href="#sec7-2">7.2 Fase 2: Simulación de Pérdida de Quórum y Auto-Degradación</a></li>
+            <li><a href="#sec7-3">7.3 Fase 3: El Dilema del Escalado en StatefulSets (5 réplicas vs rs.conf())</a></li>
+            <li><a href="#sec7-4">7.4 Por qué las Primitivas Nativas no Pueden Resolver la Gestión del Ciclo de Vida</a></li>
+          </ul>
+        </li>
+        <li><a href="#sec8">8. La Brecha hacia la Producción: Por Qué Usamos Operadores</a>
+          <ul>
+            <li><a href="#sec8-1">8.1 Matriz Comparativa: StatefulSet Manual vs. Operadores de Producción</a></li>
+            <li><a href="#sec8-2">8.2 Capacidades Esenciales de un Operador (MongoDB Community y Percona PSMDB)</a></li>
+          </ul>
+        </li>
+        <li><a href="#sec9">9. Resolución de Problemas Frecuentes (Troubleshooting)</a>
+          <ul>
+            <li><a href="#sec9-1">9.1 Error 1: Permisos Abiertos en Keyfile (permissions on keyfile are too open)</a></li>
+            <li><a href="#sec9-2">9.2 Error 2: Operación Rechazada en Secundario (NotWritablePrimary)</a></li>
+            <li><a href="#sec9-3">9.3 Error 3: Pods en Pending por Ausencia de StorageClass o Taints</a></li>
+            <li><a href="#sec9-4">9.4 Error 4: Fallo de Resolución DNS durante rs.initiate()</a></li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+    
+
+<h2>Despliegue Manual de Alta Disponibilidad con Replica Set, Anatomía de Red y el Dilema de Orquestación sin Operadores</h2>
+
+<hr />
+
+<div class="section-banner" id="sec1"><h2>1. Fundamentos y Arquitectura de Estado en Kubernetes</h2><p>El contrato de estado, comparativa de identidad y topología de Replica Set</p></div>
+<h3 id="sec1-1">1.1 El Contrato de Estado: Deployment vs StatefulSet</h3>
+<p>En la computación nativa en la nube, las aplicaciones web y APIs son predominantemente <strong>apátridas</strong> (<em>stateless</em>). Para este tipo de cargas de trabajo, el controlador idóneo en Kubernetes es el <code>Deployment</code>. Un <code>Deployment</code> asume que:
+* Todos los Pods son idénticos e intercambiables entre sí.
+* Los Pods reciben identificadores con cadenas hash aleatorias (por ejemplo, <code>api-79b8f645d-9kx2l</code>).
+* El arranque, reinicio y escalado de Pods se ejecuta concurrentemente sin un orden determinista.
+* Si un Pod es destruido, el nuevo Pod resultante no conserva ninguna identidad de red ni afinidad estricta con el volumen previo.</p>
+<p>Por el contrario, los sistemas de bases de datos distribuidas con consenso como <strong>MongoDB</strong> son sistemas de <strong>fuerte acoplamiento de estado</strong> (<em>stateful</em>). Cada nodo cumple un rol en el clúster (nodo Primario para escrituras y lecturas, o nodos Secundarios para replicación y lectura distribuida), y requiere una identidad que no cambie jamás tras un reinicio.</p>
+<pre><code>+-----------------------------------------------------------------------------------------+
+|                  COMPARATIVA DE IDENTIDAD: DEPLOYMENT VS STATEFULSET                    |
++-------------------------+--------------------------------+------------------------------+
+|  Característica         | Deployment (Stateless)         | StatefulSet (Stateful)       |
++-------------------------+--------------------------------+------------------------------+
+|  Identidad de Red       | Efímera y aleatoria            | Determinista y Fija          |
+|                         | (api-6bf9d7c8-4z9q)            | (mongodb-0, mongodb-1, ...)  |
++-------------------------+--------------------------------+------------------------------+
+|  Orden de Despliegue    | Concurrente / Arbitrario       | Secuencial y Estricto        |
+|                         | (Todos a la vez)               | (0 -&gt; 1 -&gt; 2 ...)            |
++-------------------------+--------------------------------+------------------------------+
+|  Almacenamiento (PVC)   | Compartido o Efímero           | 1 PVC dedicado por Réplica   |
+|                         | (Todos leen del mismo disco)   | (data-mongodb-0, ...)        |
++-------------------------+--------------------------------+------------------------------+
+|  Enlace tras Reinicio   | Nuevo Pod = Volumen nuevo      | Nuevo Pod = Se re-vincula al |
+|                         | o no determinista              | MISMO volumen persistente    |
++-------------------------+--------------------------------+------------------------------+
+</code></pre>
+<p>El controlador <strong><code>StatefulSet</code></strong> garantiza tres invariantes indispensables para MongoDB:
+1. <strong>Identidad de Red Estable:</strong> Cada Pod recibe un ordinal secuencial <code>[0, 1, 2]</code>. El primer Pod siempre será <code>mongodb-0</code>, el segundo <code>mongodb-1</code> y el tercero <code>mongodb-2</code>.
+2. <strong>Ciclo de Vida Secuencial (<code>OrderedReady</code>):</strong> Kubernetes no inicia <code>mongodb-1</code> hasta que <code>mongodb-0</code> esté en estado <code>Running</code> y haya superado sus <em>Readiness Probes</em>.
+3. <strong>Almacenamiento Adherente (<code>volumeClaimTemplates</code>):</strong> Cada réplica dispone de su propio volumen dinámico. Si el nodo físico donde reside <code>mongodb-0</code> se reinicia, el nuevo Pod <code>mongodb-0</code> volverá a reclamar exactamente el PVC <code>data-mongodb-0</code>.</p>
+<hr />
+<h3 id="sec1-2">1.2 Diagrama de Topología y Flujo de Replicación del Replica Set</h3>
+<p>A continuación se detalla la arquitectura que implementaremos paso a paso en este laboratorio:</p>
+<pre><code>                                    APLICACIÓN / CLIENTE MONGODB
+                                                 |
+                URI: mongodb://mongodb-0.mongodb-headless:27017,mongodb-1.../?replicaSet=rs0
+                                                 |
+                     +---------------------------+---------------------------+
+                     |                           |                           |
+                     v                           v                           v
++--------------------+---+  +--------------------+---+  +--------------------+---+
+| Pod: mongodb-0         |  | Pod: mongodb-1         |  | Pod: mongodb-2         |
+| FQDN:                  |  | FQDN:                  |  | FQDN:                  |
+| mongodb-0.mongodb-hdls |  | mongodb-1.mongodb-hdls |  | mongodb-2.mongodb-hdls |
+|                        |  |                        |  |                        |
+| +--------------------+ |  | +--------------------+ |  | +--------------------+ |
+| | initContainer:     | |  | | initContainer:     | |  | | initContainer:     | |
+| | init-keyfile       | |  | | init-keyfile       | |  | | init-keyfile       | |
+| | - Copia de Secret  | |  | | - Copia de Secret  | |  | | - Copia de Secret  | |
+| | - chown 999:999    | |  | | - chown 999:999    | |  | | - chown 999:999    | |
+| | - chmod 400        | |  | | - chmod 400        | |  | | - chmod 400        | |
+| +--------------------+ |  | +--------------------+ |  | +--------------------+ |
+|            |           |  |            |           |  |            |           |
+|            v           |  |            v           |  |            v           |
+| +--------------------+ |  | +--------------------+ |  | +--------------------+ |
+| | Container: mongod  | |  | | Container: mongod  | |  | | Container: mongod  | |
+| | - Rol: PRIMARY (RW)| |  | | - Rol: SECONDARY(RO| |  | | - Rol: SECONDARY(RO| |
+| | - Escribe en Oplog | |&lt;====== Oplog Sync ========|==| - Replica del Oplog| |
+| +--------------------+ |  | +--------------------+ |  | +--------------------+ |
++------------+-----------+  +------------+-----------+  +------------+-----------+
+             |                           |                           |
+ volumeClaimTemplate: 1Gi    volumeClaimTemplate: 1Gi    volumeClaimTemplate: 1Gi
+             v                           v                           v
++------------------------+  +------------------------+  +------------------------+
+| PVC: data-mongodb-0    |  | PVC: data-mongodb-1    |  | PVC: data-mongodb-2    |
+| /opt/local-path-...    |  | /opt/local-path-...    |  | /opt/local-path-...    |
++------------------------+  +------------------------+  +------------------------+
+</code></pre>
+<hr />
+<h3 id="sec1-3">1.3 Matriz de Componentes del Clúster</h3>
+<p>Para conseguir que este clúster opere sin operadores ni software externo, coordinamos cinco recursos nativos de Kubernetes:</p>
+<table>
+<thead>
+<tr>
+<th align="left">Recurso Kubernetes</th>
+<th align="left">Nombre</th>
+<th align="left">Namespace</th>
+<th align="left">Función Pedagógica Principal</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left"><strong>StorageClass</strong></td>
+<td align="left"><code>local-path</code></td>
+<td align="left">Clúster</td>
+<td align="left">Aprovisionamiento dinámico local sobre el sistema de archivos del nodo anfitrión (<code>/opt/local-path-provisioner</code>).</td>
+</tr>
+<tr>
+<td align="left"><strong>Secret</strong></td>
+<td align="left"><code>mongo-secret</code></td>
+<td align="left"><code>default</code></td>
+<td align="left">Almacenamiento seguro de credenciales de superusuario (<code>admin</code>) y archivo <code>keyfile</code> criptográfico para autenticación de Replica Set.</td>
+</tr>
+<tr>
+<td align="left"><strong>ConfigMap</strong></td>
+<td align="left"><code>mongo-config</code></td>
+<td align="left"><code>default</code></td>
+<td align="left">Archivo declarativo <code>mongod.conf</code> con parámetros de almacenamiento WiredTiger, límite de caché, puerto y replicación.</td>
+</tr>
+<tr>
+<td align="left"><strong>Service (Headless)</strong></td>
+<td align="left"><code>mongodb-headless</code></td>
+<td align="left"><code>default</code></td>
+<td align="left"><code>clusterIP: None</code>. Provee nombres DNS directos y estables para cada Pod en CoreDNS (<code>mongodb-X.mongodb-headless</code>).</td>
+</tr>
+<tr>
+<td align="left"><strong>StatefulSet</strong></td>
+<td align="left"><code>mongodb</code></td>
+<td align="left"><code>default</code></td>
+<td align="left">Orquesta las 3 réplicas, ejecuta el <code>initContainer</code> de seguridad y reclama volúmenes dedicados.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<div class="section-banner" id="sec2"><h2>2. Preparación del Almacenamiento Dinámico (StorageClass)</h2><p>Aprovisionamiento dinámico local, Rancher local-path y tolerancias de nodo</p></div>
+<h3 id="sec2-1">2.1 El Problema del Almacenamiento en Clústeres Kubeadm / Bare-Metal</h3>
+<p>En servicios gestionados en la nube pública (como Google Kubernetes Engine - GKE, AWS EKS o Azure AKS), el proveedor incluye de fábrica un controlador CSI (<em>Container Storage Interface</em>) que aprovisiona automáticamente discos virtuales cuando se solicita un PVC.</p>
+<p>Sin embargo, en un clúster instalado desde cero mediante <code>kubeadm</code> (como el configurado en máquinas virtuales Ubuntu), <strong>no existe ningún aprovisionador de almacenamiento configurado por defecto</strong>. </p>
+<div class="alert alert-warning"><div class="alert-title">Advertencia</div>Si intentas aplicar un `StatefulSet` con `volumeClaimTemplates` en un clúster Kubeadm sin StorageClass, los PVCs quedarán congelados en estado `Pending` con el evento:<br>`waiting for a volume to be created, either by dynamic provisioning or by manually creating a PersistentVolume`.</div>
+
+<p>Para resolver esto en entornos de laboratorio de manera ligera y confiable, utilizaremos <strong>Rancher <code>local-path-provisioner</code></strong>. Este controlador escucha eventos de creación de PVCs y crea automáticamente carpetas dedicadas en el sistema de archivos del nodo físico (<code>/opt/local-path-provisioner</code>), vinculándolas de forma transparente como un <code>PersistentVolume</code> con modo de acceso <code>ReadWriteOnce</code>.</p>
+<hr />
+<h3 id="sec2-2">2.2 Despliegue de Rancher <code>local-path-provisioner</code></h3>
+<p>El archivo <a href="file:///home/miguel/git/poc-training-k8s-cluster-mongo/manifests/00-local-path-storage.yaml"><code>manifests/00-local-path-storage.yaml</code></a> contiene la definición completa: ServiceAccount, ClusterRoles con permisos de gestión de volumen, ConfigMap con scripts de montaje (<code>setup</code>/<code>teardown</code>), el Deployment del controlador y el objeto <code>StorageClass</code>.</p>
+<p>Aplicamos el aprovisionador con el siguiente comando:</p>
+<pre><code class="language-bash">kubectl apply -f manifests/00-local-path-storage.yaml
+</code></pre>
+<p><strong>Salida esperada:</strong></p>
+<pre><code class="language-text">namespace/local-path-storage created
+serviceaccount/local-path-provisioner-service-account created
+clusterrole.rbac.authorization.k8s.io/local-path-provisioner-role created
+clusterrolebinding.rbac.authorization.k8s.io/local-path-provisioner-bind created
+configmap/local-path-config created
+deployment.apps/local-path-provisioner created
+storageclass.storage.k8s.io/local-path created
+</code></pre>
+<hr />
+<h3 id="sec2-3">2.3 Verificación de la StorageClass por Defecto</h3>
+<p>Verificamos que el StorageClass está disponible y configurado como el aprovisionador predeterminado (<code>(default)</code>):</p>
+<pre><code class="language-bash">kubectl get storageclass
+</code></pre>
+<p><strong>Salida esperada:</strong></p>
+<pre><code class="language-text">NAME                   PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+local-path (default)   rancher.io/local-path   Delete          WaitForFirstConsumer   false                  15s
+</code></pre>
+<p>Comprobamos que el Pod del aprovisionador está en ejecución:</p>
+<pre><code class="language-bash">kubectl get pods -n local-path-storage
+</code></pre>
+<p><strong>Salida esperada:</strong></p>
+<pre><code class="language-text">NAME                                      READY   STATUS    RESTARTS   AGE
+local-path-provisioner-6795b5f9d8-m7q2b   1/1     Running   0          25s
+</code></pre>
+<hr />
+<h3 id="sec2-4">2.4 Ajuste de Tolerancias del Nodo Master (Control Plane)</h3>
+<p>En un entorno de formación con recursos acotados (por ejemplo, un clúster de dos máquinas virtuales: <code>k8s-master</code> y <code>k8s-worker</code>), el nodo Master posee por defecto un <em>Taint</em> que impide la ejecución de cargas de trabajo de usuario:</p>
+<pre><code class="language-text">node-role.kubernetes.io/control-plane:NoSchedule
+</code></pre>
+<p>Dado que desplegaremos un Replica Set de <strong>3 Pods</strong>, y un único worker de 2 GB de RAM se vería sobrecargado, retiramos el <em>Taint</em> del nodo Master para que ambos nodos puedan alojar réplicas:</p>
+<pre><code class="language-bash">kubectl taint nodes --all node-role.kubernetes.io/control-plane- 2&gt;/dev/null || true
+</code></pre>
+<p><strong>Salida esperada:</strong></p>
+<pre><code class="language-text">node/k8s-master untainted
+</code></pre>
+<hr />
+<div class="section-banner" id="sec3"><h2>3. Configuración Base y Gestión de Credenciales</h2><p>Secret con clave criptográfica keyFile y ConfigMap con mongod.conf</p></div>
+<h3 id="sec3-1">3.1 Secret de Autenticación para Superusuario y Clúster KeyFile</h3>
+<p>A diferencia de PostgreSQL (que utiliza <code>pg_hba.conf</code> y contraseñas por usuario), MongoDB exige dos capas de seguridad distintas:
+1. <strong>Autenticación de Aplicaciones y Usuarios:</strong> Usuario administrativo (<code>admin</code>) y contraseña de superusuario (<code>MONGO_INITDB_ROOT_PASSWORD</code>).
+2. <strong>Autenticación Interna entre Nodos (<em>Internal Membership Authentication</em>):</strong> Todos los miembros de un Replica Set deben compartir un archivo criptográfico idéntico denominado <strong><code>keyFile</code></strong>. Este archivo actúa como una clave compartida (<em>pre-shared key</em>) que cifra y autentica los mensajes del protocolo de replicación y las votaciones de quórum.</p>
+<p>Generamos la clave interna de 756 bytes mediante <code>openssl</code> y creamos el archivo <a href="file:///home/miguel/git/poc-training-k8s-cluster-mongo/manifests/01-mongo-secret.yaml"><code>manifests/01-mongo-secret.yaml</code></a>:</p>
+<pre><code class="language-yaml">apiVersion: v1
+kind: Secret
+metadata:
+  name: mongo-secret
+  namespace: default
+type: Opaque
+stringData:
+  MONGO_INITDB_ROOT_USERNAME: &quot;admin&quot;
+  MONGO_INITDB_ROOT_PASSWORD: &quot;MongoSecret2026!&quot;
+  keyfile: |
+    MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC7rWJ2qU9xQ2L0
+    ... (clave de 756 bytes) ...
+</code></pre>
+<p>Aplicamos el Secret en el clúster:</p>
+<pre><code class="language-bash">kubectl apply -f manifests/01-mongo-secret.yaml
+</code></pre>
+<p><strong>Salida esperada:</strong></p>
+<pre><code class="language-text">secret/mongo-secret created
+</code></pre>
+<hr />
+<h3 id="sec3-2">3.2 ConfigMap con <code>mongod.conf</code> (WiredTiger, Replicación y Seguridad)</h3>
+<p>Kubernetes nos permite desacoplar la configuración del motor de base de datos utilizando un <code>ConfigMap</code>. El archivo <a href="file:///home/miguel/git/poc-training-k8s-cluster-mongo/manifests/02-mongo-configmap.yaml"><code>manifests/02-mongo-configmap.yaml</code></a> define el archivo de configuración estándar de MongoDB:</p>
+<pre><code class="language-yaml">apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongo-config
+  namespace: default
+data:
+  mongod.conf: |
+    storage:
+      dbPath: /data/db
+      journal:
+        enabled: true
+      wiredTiger:
+        engineConfig:
+          cacheSizeGB: 0.25
+
+    net:
+      port: 27017
+      bindIpAll: true
+
+    replication:
+      replSetName: rs0
+
+    security:
+      keyFile: /etc/mongo-keyfile/keyfile
+      authorization: enabled
+</code></pre>
+<div class="alert alert-tip"><div class="alert-title">Consejo Práctico</div>**Optimización de Memoria:** Por defecto, el motor WiredTiger intenta consumir el 50% de la RAM del host menos 1 GB. En un entorno de máquinas virtuales compartidas, 3 Pods de MongoDB consumirían rápidamente toda la memoria disponible, provocando el desalojo de contenedores por `OOMKilled`. El parámetro `wiredTiger.engineConfig.cacheSizeGB: 0.25` limita la caché a 256 MB por instancia, garantizando total estabilidad.</div>
+
+<p>Aplicamos el ConfigMap:</p>
+<pre><code class="language-bash">kubectl apply -f manifests/02-mongo-configmap.yaml
+</code></pre>
+<p><strong>Salida esperada:</strong></p>
+<pre><code class="language-text">configmap/mongo-config created
+</code></pre>
+<hr />
+<div class="section-banner" id="sec4"><h2>4. La Capa de Red: Headless Service y el Paradigma de Conexión de MongoDB</h2><p>Headless Services (clusterIP: None), CoreDNS y conexión dinámica por seedlist</p></div>
+<h3 id="sec4-1">4.1 Por qué un Servicio Estándar no Sirve: El Headless Service (<code>clusterIP: None</code>)</h3>
+<p>Un <code>Service</code> normal de Kubernetes asigna una dirección IP virtual (<code>ClusterIP</code>) y actúa como un balanceador de carga de nivel 4 (L4) distribuyendo paquetes TCP de forma aleatoria o round-robin entre los Pods detrás del selector.</p>
+<p>Este comportamiento es inútil para la replicación de MongoDB:
+* Los miembros del Replica Set necesitan comunicarse punto a punto con cada nodo específico para comprobar latidos (<em>heartbeats</em>), consultar el Oplog y emitir votos.
+* Si un nodo intentara sincronizarse con una IP virtual balanceada, cada paquete TCP llegaría a un miembro aleatorio diferente, rompiendo la coherencia de estado.</p>
+<p>Para resolver esto, creamos un <strong>Headless Service</strong> especificando explícitamente <code>clusterIP: None</code> en <a href="file:///home/miguel/git/poc-training-k8s-cluster-mongo/manifests/03-mongo-service.yaml"><code>manifests/03-mongo-service.yaml</code></a>:</p>
+<pre><code class="language-yaml">apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-headless
+  namespace: default
+  labels:
+    app: mongodb
+spec:
+  clusterIP: None
+  ports:
+    - name: mongodb
+      port: 27017
+      targetPort: 27017
+  selector:
+    app: mongodb
+</code></pre>
+<p>Aplicamos el servicio de red:</p>
+<pre><code class="language-bash">kubectl apply -f manifests/03-mongo-service.yaml
+</code></pre>
+<p><strong>Salida esperada:</strong></p>
+<pre><code class="language-text">service/mongodb-headless created
+</code></pre>
+<hr />
+<h3 id="sec4-2">4.2 Resolución DNS Individual por Pod en CoreDNS</h3>
+<p>Al combinar un <code>StatefulSet</code> (<code>serviceName: mongodb-headless</code>) con un Headless Service, el servidor CoreDNS de Kubernetes crea de forma automática registros DNS de tipo <code>A</code> que vinculan cada Pod individual con su nombre ordinal:</p>
+<pre><code class="language-text">&lt;nombre-pod&gt;.&lt;nombre-servicio&gt;.&lt;namespace&gt;.svc.&lt;dominio-cluster&gt;
+</code></pre>
+<p>Para nuestro clúster, los tres nombres de dominio completos (FQDN) generados son:
+1. <code>mongodb-0.mongodb-headless.default.svc.cluster.local</code>
+2. <code>mongodb-1.mongodb-headless.default.svc.cluster.local</code>
+3. <code>mongodb-2.mongodb-headless.default.svc.cluster.local</code></p>
+<p>Estos FQDNs son deterministas y permanentes: si el Pod <code>mongodb-1</code> muere y es recreado en otro nodo con una IP completamente distinta, CoreDNS actualizará el registro DNS apuntando a la nueva IP, preservando la identidad del miembro del clúster sin necesidad de reconfigurar MongoDB.</p>
+<hr />
+<h3 id="sec4-3">4.3 El Antipatrón del Servicio Primario Estático y el Rol de los Drivers (Seedlist)</h3>
+<p>En arquitecturas tradicionales como PostgreSQL, es habitual definir un servicio <code>postgresql-primary</code> con selector fijo a <code>statefulset.kubernetes.io/pod-name: postgresql-0</code>.</p>
+<div class="alert alert-caution"><div class="alert-title">Precaución Crítica</div>**¡Crear un servicio de Kubernetes estático para el Primario en MongoDB es un grave error de diseño!**<br>En MongoDB, el liderazgo es dinámico y democrático: cualquier réplica puede ser elegida PRIMARY ante una caída o mantenimiento. Si crearas un Service apuntando fijamente a `mongodb-0`, cuando `mongodb-1` ascienda a Primario, tu aplicación continuaría enviando escrituras a `mongodb-0` (que ahora es secundario o está caído), recibiendo el error fatal:<br>`MongoServerError: NotWritablePrimary`.</div>
+
+<p>Los drivers oficiales de MongoDB (Node.js, Python PyMongo, Java, Go, etc.) implementan el protocolo SDAM (<em>Server Discovery and Monitoring</em>). La aplicación se conecta utilizando una <strong>cadena de conexión de Replica Set con lista de semillas (<em>seedlist</em>)</strong>:</p>
+<pre><code class="language-text">mongodb://mongodb-0.mongodb-headless:27017,mongodb-1.mongodb-headless:27017,mongodb-2.mongodb-headless:27017/?replicaSet=rs0
+</code></pre>
+<ol>
+<li>El driver se conecta a cualquiera de las semillas disponibles.</li>
+<li>Ejecuta el comando <code>hello</code> (antiguamente <code>isMaster</code>).</li>
+<li>El clúster le responde con la topología completa y le informa <strong>quién es el PRIMARY en ese instante exacto</strong>.</li>
+<li>El driver enruta automáticamente todas las operaciones de escritura directamente al PRIMARY actual. Si ocurre una elección y el Primario cambia, el driver detecta el cambio en milisegundos y redirige el tráfico sin reiniciar la aplicación.</li>
+</ol>
+<hr />
+<div class="section-banner" id="sec5"><h2>5. Despliegue del StatefulSet y Mecánica del InitContainer</h2><p>StatefulSets OrderedReady, PVCs dedicados e initContainer para permisos 0400</p></div>
+<h3 id="sec5-1">5.1 Anatomía del StatefulSet: <code>replicas: 3</code>, <code>serviceName</code> y <code>OrderedReady</code></h3>
+<p>El archivo <a href="file:///home/miguel/git/poc-training-k8s-cluster-mongo/manifests/04-mongo-statefulset.yaml"><code>manifests/04-mongo-statefulset.yaml</code></a> reúne la configuración completa del clúster:</p>
+<pre><code class="language-yaml">apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongodb
+  namespace: default
+spec:
+  serviceName: mongodb-headless
+  replicas: 3
+  podManagementPolicy: OrderedReady
+  selector:
+    matchLabels:
+      app: mongodb
+...
+</code></pre>
+<ul>
+<li><code>serviceName: mongodb-headless</code>: Asocia la identidad de red de los Pods con el Headless Service definido anteriormente.</li>
+<li><code>replicas: 3</code>: Despliega el quórum electoral mínimo necesario para soportar la caída de 1 nodo sin perder el servicio de escritura.</li>
+<li><code>podManagementPolicy: OrderedReady</code>: Orden de despliegue estricto. El Pod <code>mongodb-1</code> no comenzará su arranque hasta que <code>mongodb-0</code> haya superado sus pruebas de salud (<em>readiness</em>).</li>
+</ul>
+<hr />
+<h3 id="sec5-2">5.2 Aislamiento de Volúmenes con <code>volumeClaimTemplates</code></h3>
+<p>A diferencia de un Deployment (donde todos los Pods compartirían un volumen NFS con graves riesgos de corrupción en motores transaccionales), el <code>StatefulSet</code> utiliza <code>volumeClaimTemplates</code>:</p>
+<pre><code class="language-yaml">  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: local-path
+        resources:
+          requests:
+            storage: 1Gi
+</code></pre>
+<p>Kubernetes creará automáticamente un PVC independiente por cada ordinal:
+* <code>data-mongodb-0</code>
+* <code>data-mongodb-1</code>
+* <code>data-mongodb-2</code></p>
+<p>Cada PVC quedará vinculado dinámicamente a una carpeta local en el nodo anfitrión gestionada por <code>local-path-provisioner</code>.</p>
+<hr />
+<h3 id="sec5-3">5.3 Desmontando la Fricción de Seguridad: El InitContainer para el <code>keyFile</code> (<code>chmod 400</code>)</h3>
+<p>MongoDB aplica una política estricta de seguridad en el archivo <code>keyFile</code>:</p>
+<blockquote>
+<p><em>The keyfile must contain between 6 and 1024 characters and have permissions of 400 or 600 (read-only for owner). Permissions more permissive than 600 will cause mongod to reject the file on startup.</em></p>
+</blockquote>
+<p>En Kubernetes, cuando montas un objeto <code>Secret</code> como volumen, el sistema de archivos virtual de Kubelet lo monta por defecto perteneciente a <code>root</code> y con permisos de lectura para el grupo (<code>0644</code>). Si inicias <code>mongod</code> apuntando directamente a ese Secret montado, el proceso aborta inmediatamente con:</p>
+<pre><code class="language-text">Fatal Assertion 16996: permissions on /etc/mongo-keyfile/keyfile are too open: 0644
+</code></pre>
+<p>Para solucionar este dilema de manera 100% nativa en Kubernetes, incorporamos un <strong><code>initContainer</code></strong> (<code>init-keyfile</code>) con un volumen temporal <code>emptyDir</code>:</p>
+<pre><code class="language-yaml">      initContainers:
+        - name: init-keyfile
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              echo &quot;==&gt; [INIT] Copiando keyfile desde Secret al volumen compartido...&quot;
+              cp /tmp/raw-keyfile/keyfile /etc/mongo-keyfile/keyfile
+              echo &quot;==&gt; [INIT] Ajustando propietario a mongodb (999:999) y permisos a 0400...&quot;
+              chown 999:999 /etc/mongo-keyfile/keyfile
+              chmod 400 /etc/mongo-keyfile/keyfile
+              ls -la /etc/mongo-keyfile/keyfile
+              echo &quot;==&gt; [INIT] Keyfile preparado exitosamente.&quot;
+          volumeMounts:
+            - name: raw-keyfile
+              mountPath: /tmp/raw-keyfile
+              readOnly: true
+            - name: mongo-keyfile
+              mountPath: /etc/mongo-keyfile
+</code></pre>
+<ol>
+<li>El Secret de sólo lectura se monta en <code>/tmp/raw-keyfile</code>.</li>
+<li>El contenedor auxiliar <code>busybox</code> copia el archivo al volumen <code>emptyDir</code> montado en <code>/etc/mongo-keyfile</code>.</li>
+<li>Aplica <code>chown 999:999</code> (el UID de usuario <code>mongodb</code>) y <code>chmod 400</code>.</li>
+<li>El contenedor principal <code>mongod</code> arranca y lee el archivo con los permisos exactos que exige el motor.</li>
+</ol>
+<hr />
+<h3 id="sec5-4">5.4 Despliegue Secuencial y Seguimiento del Arranque</h3>
+<p>Aplicamos el StatefulSet en el clúster:</p>
+<pre><code class="language-bash">kubectl apply -f manifests/04-mongo-statefulset.yaml
+</code></pre>
+<p><strong>Salida esperada:</strong></p>
+<pre><code class="language-text">statefulset.apps/mongodb created
+</code></pre>
+<p>Supervisamos el arranque ordenado de los tres Pods:</p>
+<pre><code class="language-bash">kubectl get pods -l app=mongodb -w
+</code></pre>
+<p><strong>Salida esperada:</strong></p>
+<pre><code class="language-text">NAME        READY   STATUS     RESTARTS   AGE
+mongodb-0   0/1     Init:0/1   0          5s
+mongodb-0   0/1     PodInitializing   0   12s
+mongodb-0   1/1     Running           0   18s
+mongodb-1   0/1     Init:0/1          0   20s
+mongodb-1   1/1     Running           0   35s
+mongodb-2   0/1     Init:0/1          0   37s
+mongodb-2   1/1     Running           0   52s
+</code></pre>
+<p>Comprobamos los registros del <code>initContainer</code> en <code>mongodb-0</code>:</p>
+<pre><code class="language-bash">kubectl logs mongodb-0 -c init-keyfile
+</code></pre>
+<p><strong>Salida esperada:</strong></p>
+<pre><code class="language-text">==&gt; [INIT] Copiando keyfile desde Secret al volumen compartido...
+==&gt; [INIT] Ajustando propietario a mongodb (999:999) y permisos a 0400...
+-r--------    1 999      999            756 Nov 25 18:00 /etc/mongo-keyfile/keyfile
+==&gt; [INIT] Keyfile preparado exitosamente.
+</code></pre>
+<p>Verificamos que los 3 volúmenes persistentes se han creado y vinculado (<code>Bound</code>):</p>
+<pre><code class="language-bash">kubectl get pvc -l app=mongodb
+</code></pre>
+<p><strong>Salida esperada:</strong></p>
+<pre><code class="language-text">NAME             STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+data-mongodb-0   Bound    pvc-3a1b8c2d-1111-2222-3333-444455556666   1Gi        RWO            local-path     1m
+data-mongodb-1   Bound    pvc-7e8f9a0b-2222-3333-4444-555566667777   1Gi        RWO            local-path     50s
+data-mongodb-2   Bound    pvc-1c2d3e4f-3333-4444-5555-666677778888   1Gi        RWO            local-path     30s
+</code></pre>
+<hr />
+<div class="section-banner" id="sec6"><h2>6. Inicialización Guiada y Verificación del Replica Set</h2><p>Conexión interactiva con mongosh, rs.initiate() con FQDNs y verificación de Oplog</p></div>
+<p>En este instante, los tres procesos <code>mongod</code> están en ejecución, pero están en estado no inicializado, esperando formar parte de un Replica Set. Procederemos a inicializar el clúster interactivamente con <code>mongosh</code>.</p>
+<h3 id="sec6-1">6.1 Acceso Interactivo con <code>mongosh</code> al Pod Inicial (<code>mongodb-0</code>)</h3>
+<p>Nos conectamos mediante el shell oficial moderno <code>mongosh</code> al contenedor <code>mongodb-0</code>:</p>
+<pre><code class="language-bash">kubectl exec -it mongodb-0 -- mongosh
+</code></pre>
+<p><strong>Salida esperada:</strong></p>
+<pre><code class="language-text">Current Mongosh Log ID: 6744b2f1e29c81234567890a
+Connecting to:      mongodb://127.0.0.1:27017/?directConnection=true&amp;serverSelectionTimeoutMS=2000
+Using MongoDB:      7.0.14
+Using Mongosh:      2.3.1
+
+test&gt;
+</code></pre>
+<hr />
+<h3 id="sec6-2">6.2 Inicialización del Replica Set (<code>rs.initiate()</code>) paso a paso con FQDNs</h3>
+<p>Dentro de la sesión de <code>mongosh</code> en <code>mongodb-0</code>, ejecutamos el comando de inicialización pasando explícitamente los nombres FQDN de CoreDNS para los tres miembros:</p>
+<pre><code class="language-javascript">rs.initiate({
+  _id: &quot;rs0&quot;,
+  members: [
+    { _id: 0, host: &quot;mongodb-0.mongodb-headless.default.svc.cluster.local:27017&quot; },
+    { _id: 1, host: &quot;mongodb-1.mongodb-headless.default.svc.cluster.local:27017&quot; },
+    { _id: 2, host: &quot;mongodb-2.mongodb-headless.default.svc.cluster.local:27017&quot; }
+  ]
+})
+</code></pre>
+<p><strong>Salida esperada:</strong></p>
+<pre><code class="language-json">{ &quot;ok&quot;: 1 }
+</code></pre>
+<p>Tras presionar Enter, el prompt de la consola cambiará automáticamente:
+* Primero mostrará: <code>rs0 [direct: secondary] test&gt;</code>
+* Y tras 2-3 segundos, una vez finalizada la auto-elección inicial: <code>rs0 [direct: primary] test&gt;</code></p>
+<p>Comprobamos el estado del quórum y los miembros con <code>rs.status()</code>:</p>
+<pre><code class="language-javascript">rs.status()
+</code></pre>
+<p><strong>Salida observada (Campos clave de consenso):</strong></p>
+<pre><code class="language-json">{
+  &quot;set&quot;: &quot;rs0&quot;,
+  &quot;date&quot;: ISODate(&quot;2026-11-25T18:05:00.000Z&quot;),
+  &quot;myState&quot;: 1,
+  &quot;term&quot;: Long(&quot;1&quot;),
+  &quot;members&quot;: [
+    {
+      &quot;_id&quot;: 0,
+      &quot;name&quot;: &quot;mongodb-0.mongodb-headless.default.svc.cluster.local:27017&quot;,
+      &quot;health&quot;: 1,
+      &quot;state&quot;: 1,
+      &quot;stateStr&quot;: &quot;PRIMARY&quot;
+    },
+    {
+      &quot;_id&quot;: 1,
+      &quot;name&quot;: &quot;mongodb-1.mongodb-headless.default.svc.cluster.local:27017&quot;,
+      &quot;health&quot;: 1,
+      &quot;state&quot;: 2,
+      &quot;stateStr&quot;: &quot;SECONDARY&quot;
+    },
+    {
+      &quot;_id&quot;: 2,
+      &quot;name&quot;: &quot;mongodb-2.mongodb-headless.default.svc.cluster.local:27017&quot;,
+      &quot;health&quot;: 1,
+      &quot;state&quot;: 2,
+      &quot;stateStr&quot;: &quot;SECONDARY&quot;
+    }
+  ],
+  &quot;ok&quot;: 1
+}
+</code></pre>
+<p>¡El Replica Set está activo, coordinado y sincronizado!</p>
+<hr />
+<h3 id="sec6-3">6.3 Creación de Base de Datos, Colección y Documentos de Prueba</h3>
+<p>Sin salir de <code>mongosh</code> en el nodo PRIMARY (<code>mongodb-0</code>), creamos una base de datos formativa e insertamos documentos:</p>
+<pre><code class="language-javascript">use escuela_devops
+
+db.alumnos.insertMany([
+  { nombre: &quot;Miguel Serrano&quot;, modulo: &quot;Kubernetes StatefulSets&quot;, fecha: new Date() },
+  { nombre: &quot;Laura Gomez&quot;, modulo: &quot;CoreDNS y Headless Services&quot;, fecha: new Date() },
+  { nombre: &quot;Carlos Fernandez&quot;, modulo: &quot;Consenso Distribuido MongoDB&quot;, fecha: new Date() }
+])
+
+db.alumnos.find()
+</code></pre>
+<p><strong>Salida esperada:</strong></p>
+<pre><code class="language-text">{ acknowledged: true, insertedIds: { '0': ObjectId(&quot;...&quot;), '1': ObjectId(&quot;...&quot;), '2': ObjectId(&quot;...&quot;) } }
+[
+  { _id: ObjectId(&quot;...&quot;), nombre: 'Miguel Serrano', modulo: 'Kubernetes StatefulSets', fecha: ... },
+  { _id: ObjectId(&quot;...&quot;), nombre: 'Laura Gomez', modulo: 'CoreDNS y Headless Services', fecha: ... },
+  { _id: ObjectId(&quot;...&quot;), nombre: 'Carlos Fernandez', modulo: 'Consenso Distribuido MongoDB', fecha: ... }
+]
+</code></pre>
+<p>Salimos con <code>exit</code>.</p>
+<hr />
+<h3 id="sec6-4">6.4 Validación de Replicación Oplog en Secundarios, Lectura y Protección contra Escrituras</h3>
+<p>Accedemos interactivamente al nodo secundario <code>mongodb-1</code>:</p>
+<pre><code class="language-bash">kubectl exec -it mongodb-1 -- mongosh
+</code></pre>
+<p><strong>Salida esperada:</strong></p>
+<pre><code class="language-text">rs0 [direct: secondary] test&gt;
+</code></pre>
+<p>Intentamos consultar los datos insertados en el Primario:</p>
+<pre><code class="language-javascript">use escuela_devops
+db.alumnos.find()
+</code></pre>
+<div class="alert alert-note"><div class="alert-title">Nota Técnica</div>En versiones modernas de `mongosh` (2.x+), el shell activa automáticamente la preferencia de lectura secundaria si te conectas en modo directo a un nodo secundario. Verás los 3 documentos inmediatamente, demostrando que el **Oplog** se ha sincronizado en tiempo real.</div>
+
+<p>Ahora intentamos realizar una escritura en el nodo Secundario:</p>
+<pre><code class="language-javascript">db.alumnos.insertOne({ nombre: &quot;Intruso&quot;, modulo: &quot;Prueba Fallida&quot; })
+</code></pre>
+<p><strong>Salida esperada (Rechazo Inmediato del Motor):</strong></p>
+<pre><code class="language-text">MongoServerError: NotWritablePrimary
+</code></pre>
+<p>MongoDB protege de manera estricta la coherencia de datos: <strong>solo el nodo PRIMARY tiene potestad de escribir en el almacenamiento</strong>.</p>
+<p>Salimos con <code>exit</code>.</p>
+<hr />
+<div class="section-banner" id="sec7"><h2>7. El Experimento del Caos: Resiliencia y Límites de Kubernetes Puro</h2><p>Inyección de fallos, quórum de elecciones, auto-degradación y desfase de escalado</p></div>
+<p>Llegamos al núcleo analítico del laboratorio. Hemos desplegado un clúster de base de datos con alta disponibilidad y replicación activa utilizando únicamente primitivas nativas de Kubernetes... <strong>¿Por qué entonces la industria desaconseja operar bases de datos en producción sin un Operador?</strong></p>
+<p>Vamos a someter al clúster a tres escenarios de fallo para descubrirlo.</p>
+<hr />
+<h3 id="sec7-1">7.1 Fase 1: Caída del Nodo Primario (<code>mongodb-0</code>) y Elección Automática por Quórum</h3>
+<p>A diferencia de PostgreSQL (donde la réplica queda paralizada en solo lectura y no sabe ascender sola), MongoDB cuenta con un algoritmo de elección de líder integrado basado en consenso.</p>
+<p>Simulamos la destrucción fulminante del nodo Primario actual (<code>mongodb-0</code>):</p>
+<pre><code class="language-bash">kubectl delete pod mongodb-0 --now
+</code></pre>
+<p><strong>Salida esperada:</strong></p>
+<pre><code class="language-text">pod &quot;mongodb-0&quot; deleted
+</code></pre>
+<p>Inmediatamente, nos conectamos al Pod <code>mongodb-1</code> y observamos su prompt:</p>
+<pre><code class="language-bash">kubectl exec -it mongodb-1 -- mongosh --eval &quot;rs.status().members.map(m =&gt; ({ name: m.name.split('.')[0], stateStr: m.stateStr }))&quot;
+</code></pre>
+<p><strong>Salida observada:</strong></p>
+<pre><code class="language-json">[
+  { &quot;name&quot;: &quot;mongodb-0&quot;, &quot;stateStr&quot;: &quot;(not reachable/healthy)&quot; },
+  { &quot;name&quot;: &quot;mongodb-1&quot;, &quot;stateStr&quot;: &quot;PRIMARY&quot; },
+  { &quot;name&quot;: &quot;mongodb-2&quot;, &quot;stateStr&quot;: &quot;SECONDARY&quot; }
+]
+</code></pre>
+<p><strong>¿Qué ha ocurrido?</strong>
+1. <code>mongodb-1</code> y <code>mongodb-2</code> detectaron la ausencia de latidos (<em>heartbeats</em>) de <code>mongodb-0</code>.
+2. Como hay 3 nodos configurados en el clúster, la mayoría estricta para formar quórum es:
+   $$\text{Quórum} = \left\lfloor \frac{3}{2} \right\rfloor + 1 = 2 \text{ votos}$$
+3. Los nodos 1 y 2 reunieron 2 votos sobre 3 (<code>66.6% &gt; 50%</code>).
+4. Iniciaron una elección y <strong>promovieron democráticamente a <code>mongodb-1</code> como nuevo PRIMARY en menos de 3 segundos</strong>.
+5. Mientras tanto, el controlador StatefulSet de Kubernetes volvió a arrancar el contenedor <code>mongodb-0</code>, re-vinculó su PVC <code>data-mongodb-0</code>, y cuando <code>mongodb-0</code> despertó, descubrió que había un nuevo Primario legítimo y se incorporó pacíficamente como <code>SECONDARY</code>.</p>
+<hr />
+<h3 id="sec7-2">7.2 Fase 2: Simulación de Pérdida de Quórum (Caída de 2 de 3 nodos) y Auto-Degradación</h3>
+<p>Ahora provocamos un fallo de mayor envergadura: simulamos la pérdida simultánea de dos nodos (por ejemplo, corte de red o caída física de un hipervisor con dos VMs).</p>
+<p>Escalamos temporalmente el StatefulSet o eliminamos dos pods a la vez:</p>
+<pre><code class="language-bash">kubectl delete pod mongodb-1 mongodb-2 --now
+</code></pre>
+<p>Nos conectamos a <code>mongodb-0</code> mientras los otros dos nodos están inaccesibles:</p>
+<pre><code class="language-bash">kubectl exec -it mongodb-0 -- mongosh --eval &quot;rs.status().members.map(m =&gt; ({ name: m.name.split('.')[0], stateStr: m.stateStr }))&quot;
+</code></pre>
+<p><strong>Salida observada:</strong></p>
+<pre><code class="language-json">[
+  { &quot;name&quot;: &quot;mongodb-0&quot;, &quot;stateStr&quot;: &quot;SECONDARY&quot; },
+  { &quot;name&quot;: &quot;mongodb-1&quot;, &quot;stateStr&quot;: &quot;(not reachable/healthy)&quot; },
+  { &quot;name&quot;: &quot;mongodb-2&quot;, &quot;stateStr&quot;: &quot;(not reachable/healthy)&quot; }
+]
+</code></pre>
+<p><strong>El Descubrimiento Crucial:</strong>
+* <code>mongodb-0</code> está vivo, sano y con su almacenamiento intacto.
+* Sin embargo, <strong>se ha auto-degradado a <code>SECONDARY</code> y rechaza todas las escrituras</strong>.
+* ¿Por qué? Porque solo tiene <code>1</code> voto de <code>3</code> (<code>33% &lt; 50%</code>). Para evitar inconsistencias (<em>split-brain</em>), MongoDB prohíbe terminantemente la existencia de un Primario si no se puede demostrar la mayoría de la red.
+* <strong>Lección para producción:</strong> Un clúster con 2 réplicas no tolera la pérdida de 1 nodo para escrituras; un clúster con 3 réplicas tolera la pérdida de 1 nodo; y si caen 2 nodos, el servicio de escritura queda completamente bloqueado.</p>
+<hr />
+<h3 id="sec7-3">7.3 Fase 3: El Dilema del Escalado en StatefulSets (<code>kubectl scale</code> a 5 réplicas vs <code>rs.conf()</code>)</h3>
+<p>Este es el experimento que desmantela la ilusión de gestionar MongoDB con Kubernetes nativo. Supongamos que tu equipo experimenta un incremento de tráfico y decide escalar el StatefulSet a 5 réplicas:</p>
+<pre><code class="language-bash">kubectl scale statefulset mongodb --replicas=5
+</code></pre>
+<p><strong>Salida esperada:</strong></p>
+<pre><code class="language-text">statefulset.apps/mongodb scaled
+</code></pre>
+<p>Comprobamos que Kubernetes crea los nuevos Pods y PVCs:</p>
+<pre><code class="language-bash">kubectl get pods -l app=mongodb
+</code></pre>
+<p><strong>Salida esperada:</strong></p>
+<pre><code class="language-text">NAME        READY   STATUS    RESTARTS   AGE
+mongodb-0   1/1     Running   0          10m
+mongodb-1   1/1     Running   0          8m
+mongodb-2   1/1     Running   0          6m
+mongodb-3   1/1     Running   0          25s
+mongodb-4   1/1     Running   0          10s
+</code></pre>
+<p>Kubernetes reporta orgullosamente 5 réplicas operativas (<code>5/5 Running</code>).<br />
+Ahora consultamos el catálogo interno del Replica Set de MongoDB desde cualquiera de los nodos:</p>
+<pre><code class="language-bash">kubectl exec -it mongodb-0 -- mongosh --eval &quot;rs.status().members.map(m =&gt; m.name.split('.')[0])&quot;
+</code></pre>
+<p><strong>Salida REAL del Motor de Base de Datos:</strong></p>
+<pre><code class="language-json">[
+  &quot;mongodb-0&quot;,
+  &quot;mongodb-1&quot;,
+  &quot;mongodb-2&quot;
+]
+</code></pre>
+<div class="alert alert-warning"><div class="alert-title">Advertencia</div>**¡El Clúster de MongoDB NO reconoce a `mongodb-3` ni a `mongodb-4`!**<br>Para MongoDB, esos dos Pods nuevos son simplemente instancias huérfanas que consumen CPU, RAM y almacenamiento sin formar parte del Replica Set, sin sincronizar datos y sin participar en las elecciones de quórum.<br><br>Y lo que es peor: si ejecutas `kubectl scale statefulset mongodb --replicas=1`, Kubernetes destruirá implacablemente `mongodb-2` y `mongodb-1`. El Replica Set no habrá sido reconfigurado previamente, `mongodb-0` detectará que faltan 2 miembros de su catálogo de 3, perderá el quórum y **el clúster quedará perpetuamente bloqueado en solo lectura**.</div>
+
+<hr />
+<h3 id="sec7-4">7.4 Por qué las Primitivas Nativas no Pueden Resolver la Gestión del Ciclo de Vida</h3>
+<p>El experimento demuestra una divergencia arquitectónica insalvable entre Kubernetes y los sistemas distribuidos:</p>
+<pre><code>+-----------------------------------------------------------------------------------------+
+|                  EL DESACUMPLIMIENTO ENTRE KUBERNETES Y EL MOTOR DE BD                  |
++-----------------------------------------------------------------------------------------+
+|                                                                                         |
+|   PLANO DE KUBERNETES:                 PLANO DEL MOTOR DISTRIBUIDO:                     |
+|   - Solo gestiona contenedores         - Gestiona topología interna (rs.conf)           |
+|   - Conoce Pods [0..N]                 - Requiere votación para añadir miembros         |
+|   - Escala matando procesos            - Exige rs.stepDown() ordenado antes de parar    |
+|   - Ignora la coherencia del Oplog     - Requiere quórum estricto (Mayoría &gt; 50%)       |
+|                                                                                         |
+|             \                                       /                                   |
+|              \                                     /                                    |
+|               +-----------------------------------+                                     |
+|               |       LA BRECHA OPERACIONAL       |                                     |
+|               |  Kubernetes no entiende MongoDB.  |                                     |
+|               |  MongoDB no entiende Kubernetes.  |                                     |
+|               +-----------------------------------+                                     |
+|                                 |                                                       |
+|                                 v                                                       |
+|                     EL OPERADOR DE KUBERNETES                                           |
+|       (El puente de reconciliación que une ambos mundos en tiempo real)                 |
++-----------------------------------------------------------------------------------------+
+</code></pre>
+<hr />
+<div class="section-banner" id="sec8"><h2>8. La Brecha hacia la Producción: Por Qué Usamos Operadores</h2><p>Análisis comparativo: StatefulSet manual frente a MongoDB Community y Percona PSMDB</p></div>
+<h3 id="sec8-1">8.1 Matriz Comparativa: StatefulSet Manual vs. Operadores de Producción</h3>
+<p>En entornos empresariales, el despliegue manual con StatefulSet se sustituye por Operadores especializados. A continuación se desglosan las diferencias operativas críticas:</p>
+<table>
+<thead>
+<tr>
+<th align="left">Capacidad Operativa</th>
+<th align="left">StatefulSet Manual (Laboratorio)</th>
+<th align="left">Operador de Producción (Enterprise)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left"><strong>Escalado Horizontal</strong></td>
+<td align="left">Manual con intervención humana en <code>rs.conf()</code> (<code>rs.add()</code> / <code>rs.remove()</code>). Riesgo de quórum.</td>
+<td align="left"><strong>Automático y Atómico</strong>: Modifica <code>rs.conf()</code> antes de apagar o instanciar pods.</td>
+</tr>
+<tr>
+<td align="left"><strong>Mantenimiento y Rolling Updates</strong></td>
+<td align="left">El reinicio del primario corta transacciones abruptamente provocando elecciones forzadas.</td>
+<td align="left"><strong>Graceful StepDown</strong>: Ejecuta <code>rs.stepDown()</code> preventivo promoviendo un nuevo líder antes de drenar el pod.</td>
+</tr>
+<tr>
+<td align="left"><strong>Gestión de Usuarios y BDs</strong></td>
+<td align="left">Manual interactiva con <code>mongosh</code> dentro del contenedor primario.</td>
+<td align="left"><strong>Declarativa (CRDs)</strong>: Recursos <code>MongoDBUser</code> gestionados por GitOps y RBAC.</td>
+</tr>
+<tr>
+<td align="left"><strong>Seguridad y Cifrado TLS</strong></td>
+<td align="left">Montajes manuales de Secrets con scripts frágiles de <code>chmod 400</code> en initContainers.</td>
+<td align="left"><strong>Cert-Manager Integrado</strong>: Rotación automática y sin reinicio de certificados TLS/x509.</td>
+</tr>
+<tr>
+<td align="left"><strong>Copias de Seguridad (Backups)</strong></td>
+<td align="left">Scripts en cron con <code>mongodump</code> propensos a inconsistencias de Oplog.</td>
+<td align="left"><strong>Consistencia Point-in-Time (PITR)</strong>: Snapshots coordinados con Oplog continuo en S3/GCS.</td>
+</tr>
+<tr>
+<td align="left"><strong>Sharding Distribuido</strong></td>
+<td align="left">Arquitectura inmanejable a mano (decenas de StatefulSets para <code>mongos</code>, Config y Shards).</td>
+<td align="left"><strong>Nativo en CRD</strong>: Despliega routers <code>mongos</code>, Config Servers y N Shards con una sola línea YAML.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="sec8-2">8.2 Capacidades Esenciales de un Operador (MongoDB Community Operator y Percona PSMDB)</h3>
+<p>En el ecosistema cloud-native actual existen dos grandes referentes:
+1. <strong>MongoDB Community Kubernetes Operator:</strong> Desarrollado por MongoDB Inc., ideal para orquestar Replica Sets de la versión libre de MongoDB mediante el CRD <code>MongoDBCommunity</code>.
+2. <strong>Percona Server for MongoDB Operator (PSMDB):</strong> Proyecto de código abierto de grado empresarial desarrollado por Percona. Destaca por integrar de serie:
+   * <strong>Percona Backup for MongoDB (PBM):</strong> Motor de copias consistentes en caliente con restauración en cualquier punto del tiempo (<em>Point-in-Time Recovery</em>).
+   * <strong>Monitoreo con PMM:</strong> Métricas profundas de latencia de WiredTiger y consultas lentas exportadas automáticamente a Prometheus y Grafana.
+   * <strong>Cero Bloqueo de Fabricante (<em>No Vendor Lock-in</em>):</strong> Funcionalidades de nivel corporativo (cifrado en reposo, auditoría y sharding) sin requerir licencias cerradas de Ops Manager.</p>
+<hr />
+<div class="section-banner" id="sec9"><h2>9. Resolución de Problemas Frecuentes (Troubleshooting)</h2><p>Diagnóstico y remediación de errores frecuentes de red, almacenamiento y permisos</p></div>
+<h3 id="sec9-1">9.1 Error 1: Permisos Abiertos en Keyfile (<code>permissions on keyfile are too open</code>)</h3>
+<ul>
+<li><strong>Síntoma:</strong> El contenedor <code>mongodb</code> entra en ciclo de reinicio continuo (<code>CrashLoopBackOff</code>).</li>
+<li><strong>Diagnóstico en logs (<code>kubectl logs mongodb-0 -c mongodb</code>):</strong>
+  <code>text
+  Fatal Assertion 16996 at src/mongo/db/initialize_server_global_state.cpp:420
+  permissions on /etc/mongo-keyfile/keyfile are too open: 0644</code></li>
+<li><strong>Causa Raíz:</strong> El archivo se montó directamente desde un Secret de Kubernetes sin normalizar sus permisos octales.</li>
+<li><strong>Solución Definitiva:</strong> Asegurarse de que el <code>initContainer</code> (<code>init-keyfile</code>) copie el archivo a un volumen <code>emptyDir</code> y ejecute <code>chmod 400 /etc/mongo-keyfile/keyfile &amp;&amp; chown 999:999 /etc/mongo-keyfile/keyfile</code>.</li>
+</ul>
+<hr />
+<h3 id="sec9-2">9.2 Error 2: Operación Rechazada en Secundario (<code>NotWritablePrimary</code>)</h3>
+<ul>
+<li><strong>Síntoma:</strong> Las aplicaciones clientes devuelven errores 500 y rechazan inserciones:
+  <code>text
+  MongoServerError: NotWritablePrimary</code></li>
+<li><strong>Causa Raíz:</strong> La aplicación está intentando escribir en un nodo con rol <code>SECONDARY</code> porque utiliza una IP estática o un servicio de Kubernetes en lugar de la URI con <code>replicaSet=rs0</code>.</li>
+<li><strong>Solución Definitiva:</strong> Actualizar la cadena de conexión de la aplicación para que apunte a las semillas FQDN a través del Headless Service:
+  <code>text
+  mongodb://mongodb-0.mongodb-headless:27017,mongodb-1.mongodb-headless:27017,mongodb-2.mongodb-headless:27017/?replicaSet=rs0</code></li>
+</ul>
+<hr />
+<h3 id="sec9-3">9.3 Error 3: Pods en <code>Pending</code> por Ausencia de StorageClass o Taints</h3>
+<ul>
+<li><strong>Síntoma:</strong> El Pod <code>mongodb-0</code> o <code>mongodb-2</code> permanece en estado <code>Pending</code> indefinidamente.</li>
+<li><strong>Diagnóstico con <code>kubectl describe pod mongodb-0</code>:</strong></li>
+<li>Si el evento indica: <code>0/2 nodes available: 1 node(s) had untolerated taint {node-role.kubernetes.io/control-plane}</code>:<br />
+    Ejecutar: <code>kubectl taint nodes --all node-role.kubernetes.io/control-plane-</code> para permitir la programación en el nodo Master.</li>
+<li>Si el evento indica: <code>waiting for a volume to be created, either by dynamic provisioning</code>:<br />
+    Confirmar que Rancher <code>local-path-provisioner</code> está instalado y que su StorageClass está anotada como predeterminada:
+    <code>bash
+    kubectl apply -f manifests/00-local-path-storage.yaml</code></li>
+</ul>
+<hr />
+<h3 id="sec9-4">9.4 Error 4: Fallo de Resolución DNS durante <code>rs.initiate()</code></h3>
+<ul>
+<li><strong>Síntoma:</strong> Al ejecutar <code>rs.initiate()</code>, la consola devuelve el error:
+  <code>text
+  No host described in new configuration was acceptable: mongodb-1.mongodb-headless...: NodeNotFound</code></li>
+<li><strong>Causa Raíz:</strong> Se intentó inicializar el Replica Set antes de que CoreDNS registrara los Pods o antes de que los contenedores <code>mongodb-1</code> y <code>mongodb-2</code> estuvieran en estado <code>Running</code>.</li>
+<li><strong>Solución Definitiva:</strong> Verificar con <code>kubectl get pods -l app=mongodb</code> que las 3 réplicas muestran <code>1/1 Running</code> antes de lanzar <code>rs.initiate()</code>.</li>
+</ul>
+</body>
+</html>

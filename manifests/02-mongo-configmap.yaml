@@ -1,0 +1,33 @@
+# =============================================================================
+# manifests/02-mongo-configmap.yaml
+# Configuración declarativa de mongod (WiredTiger, replicación y seguridad)
+# =============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongo-config
+  namespace: default
+data:
+  mongod.conf: |
+    # Directorio de almacenamiento y motor WiredTiger
+    storage:
+      dbPath: /data/db
+      journal:
+        enabled: true
+      wiredTiger:
+        engineConfig:
+          cacheSizeGB: 0.25
+
+    # Configuración de red y puerto de escucha
+    net:
+      port: 27017
+      bindIpAll: true
+
+    # Nombre del Replica Set
+    replication:
+      replSetName: rs0
+
+    # Control de autenticación interna con keyFile
+    security:
+      keyFile: /etc/mongo-keyfile/keyfile
+      authorization: enabled
